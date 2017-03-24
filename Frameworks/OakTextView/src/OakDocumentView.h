@@ -5,6 +5,7 @@
 
 PUBLIC @interface OakDocumentView : NSView
 @property (nonatomic, readonly) OakTextView* textView;
+@property (nonatomic) NSArray<OakDocument*>* documents;
 @property (nonatomic) OakDocument* document;
 @property (nonatomic) BOOL hideStatusBar;
 - (IBAction)toggleLineNumbers:(id)sender;

@@ -331,7 +331,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 
 - (void)showWindow:(id)sender
 {
-	if(_documents.count == 0)
+	if(self.documents.count == 0)
 	{
 		OakDocument* defaultDocument = [OakDocumentController.sharedInstance untitledDocument];
 		self.documents = @[ defaultDocument ];
@@ -387,7 +387,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 
 - (void)applicationDidBecomeActiveNotification:(NSNotification*)aNotification
 {
-	if(_documents.count)
+	if(self.documents.count)
 		[self.textView performSelector:@selector(applicationDidBecomeActiveNotification:) withObject:aNotification];
 }
 
@@ -398,7 +398,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 		return;
 
 	NSMutableArray* documentsToSave = [NSMutableArray array];
-	for(OakDocument* doc in _documents)
+	for(OakDocument* doc in self.documents)
 	{
 		if(doc.isDocumentEdited && doc.path)
 		{
@@ -413,7 +413,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 	}
 
 	[self saveDocumentsUsingEnumerator:[documentsToSave objectEnumerator] completionHandler:^(OakDocumentIOResult result){
-		if(_documents.count)
+		if(self.documents.count)
 			[self.textView performSelector:@selector(applicationDidResignActiveNotification:) withObject:aNotification];
 		IsSaving = NO;
 	}];
@@ -490,7 +490,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 
 - (void)closeTabsAtIndexes:(NSIndexSet*)anIndexSet askToSaveChanges:(BOOL)askToSaveFlag createDocumentIfEmpty:(BOOL)createIfEmptyFlag
 {
-	NSArray<OakDocument*>* documentsToClose = [_documents objectsAtIndexes:anIndexSet];
+	NSArray<OakDocument*>* documentsToClose = [self.documents objectsAtIndexes:anIndexSet];
 	if(documentsToClose.count == 0)
 		return;
 
@@ -506,7 +506,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 				}
 				else
 				{
-					NSIndexSet* newIndexes = [_documents indexesOfObjectsAtIndexes:anIndexSet options:0 passingTest:^BOOL(OakDocument* doc, NSUInteger idx, BOOL* stop){
+					NSIndexSet* newIndexes = [self.documents indexesOfObjectsAtIndexes:anIndexSet options:0 passingTest:^BOOL(OakDocument* doc, NSUInteger idx, BOOL* stop){
 						return doc.isDocumentEdited == NO;
 					}];
 					[self closeTabsAtIndexes:newIndexes askToSaveChanges:YES createDocumentIfEmpty:createIfEmptyFlag];
@@ -517,11 +517,11 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 	}
 
 	NSSet<NSUUID*>* uuids = [NSSet setWithArray:[documentsToClose valueForKey:@"identifier"]];
-	NSUUID* selectedUUID = _documents[_selectedTabIndex].identifier;
+	NSUUID* selectedUUID = self.documents[_selectedTabIndex].identifier;
 
 	NSMutableArray<OakDocument*>* newDocuments = [NSMutableArray array];
 	NSUInteger newSelectedTabIndex = _selectedTabIndex;
-	for(OakDocument* document in _documents)
+	for(OakDocument* document in self.documents)
 	{
 		if(![uuids containsObject:document.identifier])
 			[newDocuments addObject:document];
@@ -542,7 +542,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 - (IBAction)performCloseTab:(id)sender
 {
 	NSUInteger index = [sender isKindOfClass:[OakTabBarView class]] ? [sender tag] : _selectedTabIndex;
-	if(index == NSNotFound || _documents.count == 0 || _documents.count == 1 && (is_disposable(self.selectedDocument) || !self.fileBrowserVisible))
+	if(index == NSNotFound || self.documents.count == 0 || self.documents.count == 1 && (is_disposable(self.selectedDocument) || !self.fileBrowserVisible))
 		return [self performCloseWindow:sender];
 	[self closeTabsAtIndexes:[NSIndexSet indexSetWithIndex:index] askToSaveChanges:YES createDocumentIfEmpty:YES];
 }
@@ -560,7 +560,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 
 - (IBAction)performCloseAllTabs:(id)sender
 {
-	NSIndexSet* allTabs = [_documents indexesOfObjectsPassingTest:^BOOL(OakDocument* doc, NSUInteger idx, BOOL* stop){
+	NSIndexSet* allTabs = [self.documents indexesOfObjectsPassingTest:^BOOL(OakDocument* doc, NSUInteger idx, BOOL* stop){
 		return [self isDocumentSticky:doc] == NO && (doc.isDocumentEdited == NO || doc.path);
 	}];
 	[self closeTabsAtIndexes:allTabs askToSaveChanges:YES createDocumentIfEmpty:YES];
@@ -568,7 +568,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 
 - (IBAction)performCloseOtherTabsXYZ:(id)sender
 {
-	NSMutableIndexSet* otherTabs = [[_documents indexesOfObjectsPassingTest:^BOOL(OakDocument* doc, NSUInteger idx, BOOL* stop){
+	NSMutableIndexSet* otherTabs = [[self.documents indexesOfObjectsPassingTest:^BOOL(OakDocument* doc, NSUInteger idx, BOOL* stop){
 		return [self isDocumentSticky:doc] == NO && (doc.isDocumentEdited == NO || doc.path);
 	}] mutableCopy];
 
@@ -580,7 +580,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 
 - (IBAction)performCloseTabsToTheRight:(id)sender
 {
-	NSUInteger from = _selectedTabIndex + 1, to = _documents.count;
+	NSUInteger from = _selectedTabIndex + 1, to = self.documents.count;
 	if(from < to)
 		[self closeTabsAtIndexes:[NSIndexSet indexSetWithIndexesInRange:NSMakeRange(from, to - from)] askToSaveChanges:YES createDocumentIfEmpty:YES];
 }
@@ -602,7 +602,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 		return NO;
 	}
 
-	NSArray<OakDocument*>* documentsToSave = [_documents filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"isDocumentEdited == YES"]];
+	NSArray<OakDocument*>* documentsToSave = [self.documents filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"isDocumentEdited == YES"]];
 	if(!documentsToSave.count)
 	{
 		[self saveProjectState];
@@ -625,7 +625,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 	NSDictionary* userInfo = [aNotification userInfo];
 	NSString* path = userInfo[OakFileManagerPathKey];
 
-	NSIndexSet* indexSet = [_documents indexesOfObjectsPassingTest:^BOOL(OakDocument* doc, NSUInteger idx, BOOL* stop){
+	NSIndexSet* indexSet = [self.documents indexesOfObjectsPassingTest:^BOOL(OakDocument* doc, NSUInteger idx, BOOL* stop){
 		return doc.isDocumentEdited == NO && path::is_child(to_s(doc.path), to_s(path));
 	}];
 
@@ -673,7 +673,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 	BOOL restoresSession = ![[NSUserDefaults standardUserDefaults] boolForKey:kUserDefaultsDisableSessionRestoreKey];
 
 	NSMutableArray<OakDocument*>* res = [NSMutableArray array];
-	for(OakDocument* doc in _documents)
+	for(OakDocument* doc in self.documents)
 	{
 		if(doc.isDocumentEdited && (doc.path || !restoresSession))
 			[res addObject:doc];
@@ -841,13 +841,13 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 
 - (IBAction)moveDocumentToNewWindow:(id)sender
 {
-	if(_documents.count > 1)
+	if(self.documents.count > 1)
 		[self takeTabsToTearOffFrom:[NSIndexSet indexSetWithIndex:_selectedTabIndex]];
 }
 
 - (IBAction)mergeAllWindows:(id)sender
 {
-	NSMutableArray<OakDocument*>* documents = [_documents mutableCopy];
+	NSMutableArray<OakDocument*>* documents = [self.documents mutableCopy];
 	for(DocumentWindowController* delegate in SortedControllers())
 	{
 		if(delegate != self && !delegate.window.isMiniaturized)
@@ -865,8 +865,8 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 
 - (NSUUID*)disposableDocument
 {
-	if(_selectedTabIndex < _documents.count && is_disposable(_documents[_selectedTabIndex]))
-		return _documents[_selectedTabIndex].identifier;
+	if(_selectedTabIndex < self.documents.count && is_disposable(self.documents[_selectedTabIndex]))
+		return self.documents[_selectedTabIndex].identifier;
 	return nil;
 }
 
@@ -878,9 +878,9 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 
 	BOOL shouldReorder = ![[NSUserDefaults standardUserDefaults] boolForKey:kUserDefaultsDisableTabReorderingKey];
 	NSMutableArray<OakDocument*>* newDocuments = [NSMutableArray array];
-	for(NSUInteger i = 0; i <= _documents.count; ++i)
+	for(NSUInteger i = 0; i <= self.documents.count; ++i)
 	{
-		if(i == MIN(index, _documents.count))
+		if(i == MIN(index, self.documents.count))
 		{
 			NSMutableSet<NSUUID*>* didInsert = [NSMutableSet set];
 			for(NSUInteger j = 0; j < documents.count; ++j)
@@ -893,18 +893,18 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 			}
 		}
 
-		if(i == _documents.count)
+		if(i == self.documents.count)
 			break;
-		else if(shouldReorder && [newUUIDs containsObject:_documents[i].identifier])
+		else if(shouldReorder && [newUUIDs containsObject:self.documents[i].identifier])
 			continue;
-		else if([closeDocuments containsObject:_documents[i].identifier])
+		else if([closeDocuments containsObject:self.documents[i].identifier])
 			continue;
 
-		[newDocuments addObject:_documents[i]];
+		[newDocuments addObject:self.documents[i]];
 	}
 
 	self.documents        = newDocuments;
-	self.selectedTabIndex = [_documents indexOfObject:selectDocument];
+	self.selectedTabIndex = [self.documents indexOfObject:selectDocument];
 }
 
 - (void)openItems:(NSArray*)items closingOtherTabs:(BOOL)closeOtherTabsFlag
@@ -949,19 +949,19 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 
 	if(self.tabBarView && ![[NSUserDefaults standardUserDefaults] boolForKey:kUserDefaultsDisableTabAutoCloseKey])
 	{
-		NSInteger excessTabs = _documents.count - std::max<NSUInteger>(self.tabBarView.countOfVisibleTabs, 8);
+		NSInteger excessTabs = self.documents.count - std::max<NSUInteger>(self.tabBarView.countOfVisibleTabs, 8);
 		if(excessTabs > 0)
 		{
 			std::multimap<NSInteger, NSUInteger> ranked;
-			for(NSUInteger i = 0; i < _documents.count; ++i)
-				ranked.emplace([OakDocumentController.sharedInstance lruRankForDocument:_documents[i]], i);
+			for(NSUInteger i = 0; i < self.documents.count; ++i)
+				ranked.emplace([OakDocumentController.sharedInstance lruRankForDocument:self.documents[i]], i);
 
 			NSSet<NSUUID*>* newUUIDs = [NSSet setWithArray:[documents valueForKey:@"identifier"]];
 
 			NSMutableIndexSet* indexSet = [NSMutableIndexSet indexSet];
 			for(auto const& pair : ranked)
 			{
-				OakDocument* doc = _documents[pair.second];
+				OakDocument* doc = self.documents[pair.second];
 				if(!doc.isDocumentEdited && ![self isDocumentSticky:doc] && doc.isOnDisk && ![newUUIDs containsObject:doc.identifier])
 					[indexSet addIndex:pair.second];
 				if([indexSet count] == excessTabs)
@@ -1012,7 +1012,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 					[installer showGrammars:grammars forView:_documentView completionHandler:^(SelectGrammarResponse response, BundleGrammar* grammar){
 						if(response == SelectGrammarResponseInstall && grammar.bundle.isInstalled)
 						{
-							for(OakDocument* doc in _documents)
+							for(OakDocument* doc in self.documents)
 							{
 								if([doc isEqual:document] || [[doc proposedGrammars] containsObject:grammar])
 									doc.fileType = grammar.fileType;
@@ -1045,11 +1045,11 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 				show_command_error(to_s(errorMessage), filterUUID);
 
 			// Close the tab that failed to open
-			NSUInteger i = [_documents indexOfObject:document];
+			NSUInteger i = [self.documents indexOfObject:document];
 			if(i != NSNotFound)
 				[self closeTabsAtIndexes:[NSIndexSet indexSetWithIndex:i] askToSaveChanges:NO createDocumentIfEmpty:self.fileBrowserVisible];
 
-			if(_documents.count == 0)
+			if(self.documents.count == 0)
 				[self close];
 		}
 	}];
@@ -1127,7 +1127,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 	if(OakDocument* document = [anEnumerator nextObject])
 	{
 		id observerId = [[NSNotificationCenter defaultCenter] addObserverForName:OakDocumentWillShowAlertNotification object:document queue:nil usingBlock:^(NSNotification*){
-			NSUInteger i = [_documents indexOfObject:document];
+			NSUInteger i = [self.documents indexOfObject:document];
 			if(i != NSNotFound && document.isLoaded)
 			{
 				if(![document isEqual:self.selectedDocument])
@@ -1171,7 +1171,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 
 - (IBAction)saveAllDocuments:(id)sender
 {
-	NSArray* documentsToSave = [_documents filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"isDocumentEdited == YES"]];
+	NSArray* documentsToSave = [self.documents filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"isDocumentEdited == YES"]];
 	[self saveDocumentsUsingEnumerator:[documentsToSave objectEnumerator] completionHandler:nil];
 }
 
@@ -1179,7 +1179,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 {
 	NSArray* documentsToSave = @[ ];
 	if(includeAllFlag)
-		documentsToSave = [_documents filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"isDocumentEdited == YES AND path != NULL"]];
+		documentsToSave = [self.documents filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"isDocumentEdited == YES AND path != NULL"]];
 	else if(self.selectedDocument && (self.selectedDocument.isDocumentEdited || !self.selectedDocument.isOnDisk))
 		documentsToSave = @[ self.selectedDocument ];
 
@@ -1471,6 +1471,11 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 // = Properties =
 // ==============
 
+- (NSArray<OakDocument*>*)documents
+{
+	return self.documentView.documents;
+}
+
 - (void)setDocuments:(NSArray<OakDocument*>*)newDocuments
 {
 	for(OakDocument* document in newDocuments)
@@ -1483,11 +1488,11 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 			document.directory = self.projectPath ?: self.defaultProjectPath;
 	}
 
-	for(OakDocument* document in _documents)
+	for(OakDocument* document in self.documents)
 		[document close];
 
-	_documents = newDocuments;
-	if(_documents.count)
+	self.documentView.documents = newDocuments;
+	if(self.documents.count)
 		[self.tabBarView reloadData];
 
 	[self updateFileBrowserStatus:self];
@@ -1561,11 +1566,11 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 // = OakTabBarViewDataSource =
 // ===========================
 
-- (NSUInteger)numberOfRowsInTabBarView:(OakTabBarView*)aTabBarView                         { return _documents.count; }
-- (NSString*)tabBarView:(OakTabBarView*)aTabBarView titleForIndex:(NSUInteger)anIndex      { return [self titleForDocument:_documents[anIndex] withSetting:kSettingsTabTitleKey]; }
-- (NSString*)tabBarView:(OakTabBarView*)aTabBarView pathForIndex:(NSUInteger)anIndex       { return _documents[anIndex].path ?: @""; }
-- (NSString*)tabBarView:(OakTabBarView*)aTabBarView identifierForIndex:(NSUInteger)anIndex { return _documents[anIndex].identifier.UUIDString; }
-- (BOOL)tabBarView:(OakTabBarView*)aTabBarView isEditedAtIndex:(NSUInteger)anIndex         { return _documents[anIndex].isDocumentEdited; }
+- (NSUInteger)numberOfRowsInTabBarView:(OakTabBarView*)aTabBarView                         { return self.documents.count; }
+- (NSString*)tabBarView:(OakTabBarView*)aTabBarView titleForIndex:(NSUInteger)anIndex      { return [self titleForDocument:self.documents[anIndex] withSetting:kSettingsTabTitleKey]; }
+- (NSString*)tabBarView:(OakTabBarView*)aTabBarView pathForIndex:(NSUInteger)anIndex       { return self.documents[anIndex].path ?: @""; }
+- (NSString*)tabBarView:(OakTabBarView*)aTabBarView identifierForIndex:(NSUInteger)anIndex { return self.documents[anIndex].identifier.UUIDString; }
+- (BOOL)tabBarView:(OakTabBarView*)aTabBarView isEditedAtIndex:(NSUInteger)anIndex         { return self.documents[anIndex].isDocumentEdited; }
 
 // ==============================
 // = OakTabBarView Context Menu =
@@ -1576,7 +1581,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 	id res = [sender respondsToSelector:@selector(representedObject)] ? [sender representedObject] : sender;
 	if([res isKindOfClass:[NSIndexSet class]])
 		return res;
-	else if(_documents.count)
+	else if(self.documents.count)
 		return [NSIndexSet indexSetWithIndex:self.selectedTabIndex];
 	return nil;
 }
@@ -1601,7 +1606,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 {
 	if(NSIndexSet* indexSet = [self tryObtainIndexSetFrom:sender])
 	{
-		NSArray<OakDocument*>* documents = [_documents objectsAtIndexes:indexSet];
+		NSArray<OakDocument*>* documents = [self.documents objectsAtIndexes:indexSet];
 		if(documents.count == 1)
 		{
 			DocumentWindowController* controller = [DocumentWindowController new];
@@ -1619,7 +1624,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 {
 	if(NSIndexSet* indexSet = [self tryObtainIndexSetFrom:sender])
 	{
-		for(OakDocument* doc in [_documents objectsAtIndexes:indexSet])
+		for(OakDocument* doc in [self.documents objectsAtIndexes:indexSet])
 			[self setDocument:doc sticky:![self isDocumentSticky:doc]];
 	}
 }
@@ -1627,7 +1632,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 - (NSMenu*)menuForTabBarView:(OakTabBarView*)aTabBarView
 {
 	NSInteger tabIndex = aTabBarView.tag;
-	NSInteger total    = _documents.count;
+	NSInteger total    = self.documents.count;
 
 	NSMutableIndexSet* newTabAtTab   = tabIndex == -1 ? [NSMutableIndexSet indexSetWithIndex:total] : [NSMutableIndexSet indexSetWithIndex:tabIndex + 1];
 	NSMutableIndexSet* clickedTab    = tabIndex == -1 ? [NSMutableIndexSet indexSet] : [NSMutableIndexSet indexSetWithIndex:tabIndex];
@@ -1640,9 +1645,9 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 		[rightSideTabs removeIndexes:[NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0, tabIndex + 1)]];
 	}
 
-	for(NSUInteger i = 0; i < _documents.count; ++i)
+	for(NSUInteger i = 0; i < self.documents.count; ++i)
 	{
-		if([self isDocumentSticky:_documents[i]])
+		if([self isDocumentSticky:self.documents[i]])
 		{
 			[otherTabs removeIndex:i];
 			[rightSideTabs removeIndex:i];
@@ -1677,20 +1682,20 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 
 - (BOOL)tabBarView:(OakTabBarView*)aTabBarView shouldSelectIndex:(NSUInteger)anIndex
 {
-	[self openAndSelectDocument:_documents[anIndex]];
+	[self openAndSelectDocument:self.documents[anIndex]];
 	self.selectedTabIndex = anIndex;
 	return YES;
 }
 
 - (void)tabBarView:(OakTabBarView*)aTabBarView didDoubleClickIndex:(NSUInteger)anIndex
 {
-	if(_documents.count > 1)
+	if(self.documents.count > 1)
 		[self takeTabsToTearOffFrom:[NSMutableIndexSet indexSetWithIndex:anIndex]];
 }
 
 - (void)tabBarViewDidDoubleClick:(OakTabBarView*)aTabBarView
 {
-	[self takeNewTabIndexFrom:[NSIndexSet indexSetWithIndex:_documents.count]];
+	[self takeNewTabIndexFrom:[NSIndexSet indexSetWithIndex:self.documents.count]];
 }
 
 // ================
@@ -1731,9 +1736,9 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 	return YES;
 }
 
-- (IBAction)selectNextTab:(id)sender            { self.selectedTabIndex = (_selectedTabIndex + 1) % _documents.count;                    [self openAndSelectDocument:_documents[_selectedTabIndex]]; }
-- (IBAction)selectPreviousTab:(id)sender        { self.selectedTabIndex = (_selectedTabIndex + _documents.count - 1) % _documents.count; [self openAndSelectDocument:_documents[_selectedTabIndex]]; }
-- (IBAction)takeSelectedTabIndexFrom:(id)sender { self.selectedTabIndex = [sender tag];                                                  [self openAndSelectDocument:_documents[_selectedTabIndex]]; }
+- (IBAction)selectNextTab:(id)sender            { self.selectedTabIndex = (_selectedTabIndex + 1) % self.documents.count;                    [self openAndSelectDocument:self.documents[_selectedTabIndex]]; }
+- (IBAction)selectPreviousTab:(id)sender        { self.selectedTabIndex = (_selectedTabIndex + self.documents.count - 1) % self.documents.count; [self openAndSelectDocument:self.documents[_selectedTabIndex]]; }
+- (IBAction)takeSelectedTabIndexFrom:(id)sender { self.selectedTabIndex = [sender tag];                                                  [self openAndSelectDocument:self.documents[_selectedTabIndex]]; }
 
 // ==================
 // = OakFileBrowser =
@@ -1755,7 +1760,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 	if(![anURL isFileURL])
 		return;
 
-	NSIndexSet* indexSet = [_documents indexesOfObjectsPassingTest:^BOOL(OakDocument* doc, NSUInteger idx, BOOL* stop){
+	NSIndexSet* indexSet = [self.documents indexesOfObjectsPassingTest:^BOOL(OakDocument* doc, NSUInteger idx, BOOL* stop){
 		return [doc.path isEqualToString:anURL.path];
 	}];
 	[self closeTabsAtIndexes:indexSet askToSaveChanges:YES createDocumentIfEmpty:YES];
@@ -1844,7 +1849,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 {
 	NSMutableArray* openURLs     = [NSMutableArray array];
 	NSMutableArray* modifiedURLs = [NSMutableArray array];
-	for(OakDocument* document in _documents)
+	for(OakDocument* document in self.documents)
 	{
 		if(document.path)
 			[openURLs addObject:[NSURL fileURLWithPath:document.path]];
@@ -2100,7 +2105,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 
 - (BOOL)treatAsProjectWindow
 {
-	return self.projectPath && (self.fileBrowserVisible || _documents.count > 1);
+	return self.projectPath && (self.fileBrowserVisible || self.documents.count > 1);
 }
 
 - (NSPoint)positionForWindowUnderCaret
@@ -2133,7 +2138,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 	std::string const documentBase = path::strip_extensions(documentName);
 
 	std::set<std::string> candidates = { documentName };
-	for(OakDocument* document in _documents)
+	for(OakDocument* document in self.documents)
 	{
 		if(documentDir == path::parent(to_s(document.path)) && documentBase == path::strip_extensions(path::name(to_s(document.path))))
 			candidates.insert(path::name(to_s(document.path)));
@@ -2148,7 +2153,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 	settings_t const settings = settings_for_path(to_s(self.selectedDocument.virtualPath ?: self.selectedDocument.path), to_s(self.selectedDocument.fileType) + " " + to_s(self.scopeAttributes), path::parent(documentPath), map);
 	std::string const customCandidate = settings.get(kSettingsRelatedFilePathKey, NULL_STR);
 
-	if(customCandidate != NULL_STR && customCandidate != documentPath && ([_documents indexOfObjectPassingTest:^BOOL(OakDocument* doc, NSUInteger, BOOL*){ return customCandidate == to_s(doc.path); }] != NSNotFound || path::exists(customCandidate)))
+	if(customCandidate != NULL_STR && customCandidate != documentPath && ([self.documents indexOfObjectPassingTest:^BOOL(OakDocument* doc, NSUInteger, BOOL*){ return customCandidate == to_s(doc.path); }] != NSNotFound || path::exists(customCandidate)))
 		return [self openItems:@[ @{ @"path" : [NSString stringWithCxxString:customCandidate] } ] closingOtherTabs:NO];
 
 	for(auto const& entry : path::entries(documentDir))
@@ -2199,7 +2204,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 	}
 
 	int i = 0;
-	for(OakDocument* document in _documents)
+	for(OakDocument* document in self.documents)
 	{
 		NSMenuItem* item = [aMenu addItemWithTitle:document.displayName action:@selector(takeSelectedTabIndexFrom:) keyEquivalent:i < 8 ? [NSString stringWithFormat:@"%c", '1' + i] : @""];
 		item.tag     = i;
@@ -2222,8 +2227,8 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 		[aMenu addItem:[NSMenuItem separatorItem]];
 
 		NSMenuItem* item = [aMenu addItemWithTitle:@"Last Tab" action:@selector(takeSelectedTabIndexFrom:) keyEquivalent:@"9"];
-		item.tag     = _documents.count-1;
-		item.toolTip = _documents.lastObject.displayName;
+		item.tag     = self.documents.count-1;
+		item.toolTip = self.documents.lastObject.displayName;
 	}
 }
 
@@ -2251,9 +2256,9 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 	else if(delegateToFileBrowser.find([menuItem action]) != delegateToFileBrowser.end())
 		active = self.fileBrowserVisible && [self.fileBrowser validateMenuItem:menuItem];
 	else if([menuItem action] == @selector(moveDocumentToNewWindow:))
-		active = _documents.count > 1;
+		active = self.documents.count > 1;
 	else if([menuItem action] == @selector(selectNextTab:) || [menuItem action] == @selector(selectPreviousTab:))
-		active = _documents.count > 1;
+		active = self.documents.count > 1;
 	else if([menuItem action] == @selector(revealFileInProject:) || [menuItem action] == @selector(revealFileInProjectByExpandingAncestors:))
 	{
 		active = self.selectedDocument.path != nil;
@@ -2268,9 +2273,9 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 	else if([menuItem action] == @selector(takeProjectPathFrom:))
 		[menuItem setState:[self.defaultProjectPath isEqualToString:[menuItem representedObject]] ? NSOnState : NSOffState];
 	else if([menuItem action] == @selector(performCloseOtherTabsXYZ:))
-		active = _documents.count > 1;
+		active = self.documents.count > 1;
 	else if([menuItem action] == @selector(performCloseTabsToTheRight:))
-		active = _selectedTabIndex + 1 < _documents.count;
+		active = _selectedTabIndex + 1 < self.documents.count;
 	else if([menuItem action] == @selector(performBundleItemWithUUIDStringFrom:))
 		active = [_textView validateMenuItem:menuItem];
 
@@ -2281,7 +2286,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 		{
 			active = [indexSet count] != 0;
 			if(active && [menuItem action] == @selector(toggleSticky:))
-				[menuItem setState:[self isDocumentSticky:_documents[indexSet.firstIndex]] ? NSOnState : NSOffState];
+				[menuItem setState:[self isDocumentSticky:self.documents[indexSet.firstIndex]] ? NSOnState : NSOffState];
 		}
 	}
 
@@ -2504,7 +2509,7 @@ static NSUInteger DisableSessionSavingCount = 0;
 	res[@"fileBrowserWidth"]   = @(self.fileBrowserWidth);
 
 	NSMutableArray* docs = [NSMutableArray array];
-	for(OakDocument* document in _documents)
+	for(OakDocument* document in self.documents)
 	{
 		if(!includeUntitled && (!document.path || !path::exists(to_s(document.path))))
 			continue;
