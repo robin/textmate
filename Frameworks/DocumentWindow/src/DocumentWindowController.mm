@@ -1034,7 +1034,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 			}
 
 			[self makeTextViewFirstResponder:self];
-			crash_reporter_info_t info("old selected document ‘%s’, new selected document ‘%s’", [_selectedDocument.displayName UTF8String] ?: "nil", [document.displayName UTF8String] ?: "nil");
+			crash_reporter_info_t info("old selected document ‘%s’, new selected document ‘%s’", [self.selectedDocument.displayName UTF8String] ?: "nil", [document.displayName UTF8String] ?: "nil");
 			self.selectedDocument = document;
 			[self performSelector:@selector(didOpenDocuemntInTextView:) withObject:self.documentView.textView afterDelay:0];
 			[document close];
@@ -1494,19 +1494,23 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 	[[self class] scheduleSessionBackup:self];
 }
 
+- (OakDocument*)selectedDocument
+{
+	return self.documentView.document;
+}
+
 - (void)setSelectedDocument:(OakDocument*)newDocument
 {
 	ASSERT(!newDocument || newDocument.isLoaded);
-	if([_selectedDocument isEqual:newDocument])
+	if([self.selectedDocument isEqual:newDocument])
 	{
-		self.documentView.document = _selectedDocument;
 		return;
 	}
 
-	[OakDocumentController.sharedInstance didTouchDocument:_selectedDocument];
+	[OakDocumentController.sharedInstance didTouchDocument:self.selectedDocument];
 	[OakDocumentController.sharedInstance didTouchDocument:newDocument];
 
-	if(_selectedDocument = newDocument)
+	if(newDocument)
 	{
 		NSString* projectPath = self.defaultProjectPath ?: self.fileBrowser.path ?: [newDocument.path stringByDeletingLastPathComponent];
 		if(projectPath)
@@ -1525,7 +1529,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 
 		self.projectPath = projectPath;
 
-		self.documentView.document = _selectedDocument;
+		self.documentView.document = newDocument;
 		[[self class] scheduleSessionBackup:self];
 	}
 	else
