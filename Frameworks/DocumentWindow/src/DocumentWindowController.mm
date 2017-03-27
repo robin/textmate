@@ -97,7 +97,7 @@ static void show_command_error (std::string const& message, oak::uuid_t const& u
 	std::vector<std::string>               _documentScopeAttributes; // attr.os-version, attr.untitled / attr.rev-path + kSettingsScopeAttributesKey
 }
 @property (nonatomic) ProjectLayoutView*          layoutView;
-@property (nonatomic) OakTabBarView*              tabBarView;
+
 @property (nonatomic) OakDocumentView*            documentView;
 @property (nonatomic) OakTextView*                textView;
 @property (nonatomic) OakFileBrowser*             fileBrowser;
@@ -188,16 +188,13 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 	{
 		self.identifier   = [NSUUID UUID];
 
-		self.tabBarView = [[OakTabBarView alloc] initWithFrame:NSZeroRect];
-		self.tabBarView.dataSource = self;
-		self.tabBarView.delegate   = self;
-
 		self.documentView = [[OakDocumentView alloc] init];
 		self.textView = self.documentView.textView;
 		self.textView.delegate = self;
+		self.documentView.tabBarView.dataSource = self;
+		self.documentView.tabBarView.delegate   = self;
 
 		self.layoutView = [[ProjectLayoutView alloc] initWithFrame:NSZeroRect];
-		self.layoutView.tabBarView   = self.tabBarView;
 		self.layoutView.documentView = self.documentView;
 
 		NSUInteger windowStyle = (NSTitledWindowMask|NSClosableWindowMask|NSResizableWindowMask|NSMiniaturizableWindowMask|NSTexturedBackgroundWindowMask);
@@ -243,8 +240,6 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 	[[NSNotificationCenter defaultCenter] removeObserver:self];
 
 	self.window.delegate        = nil;
-	self.tabBarView.dataSource  = nil;
-	self.tabBarView.delegate    = nil;
 	self.textView.delegate      = nil;
 
 	// When option-clicking to close all windows then
@@ -775,7 +770,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 	if([keyPath hasSuffix:@"arrangedObjects.path"] || [keyPath hasSuffix:@"arrangedObjects.displayName"] || [keyPath hasSuffix:@"arrangedObjects.documentEdited"])
 	{
 		[self updateFileBrowserStatus:self];
-		[self.tabBarView reloadData];
+		[self.documentView.tabBarView reloadData];
 		[[self class] scheduleSessionBackup:self];
 	}
 }
@@ -947,9 +942,9 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 	[self insertDocuments:documents atIndex:_selectedTabIndex + 1 selecting:documents.lastObject andClosing:tabsToClose];
 	[self openAndSelectDocument:documents.lastObject];
 
-	if(self.tabBarView && ![[NSUserDefaults standardUserDefaults] boolForKey:kUserDefaultsDisableTabAutoCloseKey])
+	if(self.documentView.tabBarView && ![[NSUserDefaults standardUserDefaults] boolForKey:kUserDefaultsDisableTabAutoCloseKey])
 	{
-		NSInteger excessTabs = self.documents.count - std::max<NSUInteger>(self.tabBarView.countOfVisibleTabs, 8);
+		NSInteger excessTabs = self.documents.count - std::max<NSUInteger>(self.documentView.tabBarView.countOfVisibleTabs, 8);
 		if(excessTabs > 0)
 		{
 			std::multimap<NSInteger, NSUInteger> ranked;
@@ -1492,8 +1487,6 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 		[document close];
 
 	self.documentView.documents = newDocuments;
-	if(self.documents.count)
-		[self.tabBarView reloadData];
 
 	[self updateFileBrowserStatus:self];
 	[[self class] scheduleSessionBackup:self];
@@ -1546,7 +1539,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 - (void)setSelectedTabIndex:(NSUInteger)newSelectedTabIndex
 {
 	_selectedTabIndex = newSelectedTabIndex;
-	[self.tabBarView setSelectedTab:newSelectedTabIndex];
+	[self.documentView.tabBarView setSelectedTab:newSelectedTabIndex];
 }
 
 - (void)setIdentifier:(NSUUID*)newIdentifier
@@ -1780,7 +1773,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 				self.fileBrowser.url = [NSURL fileURLWithPath:self.projectPath];
 			[self updateFileBrowserStatus:self];
 			if(self.layoutView.tabsAboveDocument)
-				[self.tabBarView expand];
+				[self.documentView.tabBarView expand];
 
 			[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(fileBrowserDidDuplicateAtURLs:) name:OakFileBrowserDidDuplicateURLs object:_fileBrowser];
 		}

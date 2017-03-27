@@ -14,6 +14,7 @@
 #import <OakAppKit/OakAppKit.h>
 #import <OakAppKit/NSImage Additions.h>
 #import <OakAppKit/OakToolTip.h>
+#import <OakAppKit/OakTabBarView.h>
 #import <OakAppKit/OakPasteboard.h>
 #import <OakAppKit/OakPasteboardChooser.h>
 #import <OakAppKit/OakUIConstructionFunctions.h>
@@ -72,6 +73,8 @@ static NSString* const kFoldingsColumnIdentifier  = @"foldings";
 		_textView = [[OakTextView alloc] initWithFrame:NSZeroRect];
 		_textView.autoresizingMask = NSViewWidthSizable|NSViewHeightSizable;
 
+		self.tabBarView = [[OakTabBarView alloc] initWithFrame:NSZeroRect];
+
 		textScrollView = [[NSScrollView alloc] initWithFrame:NSZeroRect];
 		textScrollView.hasVerticalScroller   = YES;
 		textScrollView.hasHorizontalScroller = YES;
@@ -99,7 +102,7 @@ static NSString* const kFoldingsColumnIdentifier  = @"foldings";
 		_statusBar.delegate = self;
 		_statusBar.target = self;
 
-		OakAddAutoLayoutViewsToSuperview(@[ gutterScrollView, gutterDividerView, textScrollView, statusDividerView, _statusBar ], self);
+		OakAddAutoLayoutViewsToSuperview(@[ gutterScrollView, gutterDividerView, textScrollView, statusDividerView, _statusBar, self.tabBarView], self);
 		OakSetupKeyViewLoop(@[ self, _textView, _statusBar ], NO);
 
 		self.document = [OakDocument documentWithString:@"" fileType:@"text.plain" customName:@"placeholder"];
@@ -117,6 +120,7 @@ static NSString* const kFoldingsColumnIdentifier  = @"foldings";
 	[super updateConstraints];
 
 	NSMutableArray* stackedViews = [NSMutableArray array];
+	[stackedViews addObject:self.tabBarView];
 	[stackedViews addObjectsFromArray:topAuxiliaryViews];
 	[stackedViews addObject:gutterScrollView];
 	[stackedViews addObjectsFromArray:bottomAuxiliaryViews];
@@ -127,7 +131,13 @@ static NSString* const kFoldingsColumnIdentifier  = @"foldings";
 		[self addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"H:|[_statusBar(==statusDividerView)]|" options:NSLayoutFormatAlignAllLeft|NSLayoutFormatAlignAllRight metrics:nil views:NSDictionaryOfVariableBindings(statusDividerView, _statusBar)]];
 	}
 
+	// FIXME: _tabBarView.neverHideLeftBorder = _tabsAboveDocument && _fileBrowserView && _fileBrowserOnRight == NO;
+	self.tabBarView.neverHideLeftBorder = NO;
+
+	NSView *tabBarView = self.tabBarView;
 	[self addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"H:|[gutterScrollView(==gutterView)][gutterDividerView][textScrollView(>=100)]|" options:NSLayoutFormatAlignAllTop|NSLayoutFormatAlignAllBottom metrics:nil views:NSDictionaryOfVariableBindings(gutterScrollView, gutterView, gutterDividerView, textScrollView)]];
+	[self addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"H:|[tabBarView]|" options:0 metrics:nil views:NSDictionaryOfVariableBindings(tabBarView)]];
+
 	[self addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"V:|[topView]" options:0 metrics:nil views:@{ @"topView" : stackedViews[0] }]];
 	[self addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"V:[bottomView]|" options:0 metrics:nil views:@{ @"bottomView" : [stackedViews lastObject] }]];
 
@@ -298,6 +308,8 @@ static NSString* const kFoldingsColumnIdentifier  = @"foldings";
 
 	self.document = nil;
 	self.symbolChooser = nil;
+	self.tabBarView.delegate = nil;
+	self.tabBarView.dataSource = nil;
 }
 
 - (void)setDocument:(OakDocument*)aDocument
@@ -334,6 +346,13 @@ static NSString* const kFoldingsColumnIdentifier  = @"foldings";
 
 	if(oldDocument)
 		[oldDocument close];
+}
+
+- (void)setDocuments:(NSArray<OakDocument*>*)newDocuments
+{
+	_documents = newDocuments;
+	if(self.documents.count)
+		[self.tabBarView reloadData];
 }
 
 - (void)updateStyle
